@@ -1,0 +1,11 @@
+INFO:     Started server process [65827]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8021 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53118 - "POST /index-pdf HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53120 - "POST /index-pdf HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53122 - "POST /index-pdf HTTP/1.1" 400 Bad Request
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [65827]

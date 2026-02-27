@@ -1,0 +1,131 @@
+@description('The location for all resources. Defaults to the resource group location.')
+param location string = resourceGroup().location
+
+@description('The API token needed to authenticate with the PageIndex wrapper API.')
+@secure()
+param apiToken string
+
+@description('The OpenAI API key needed for the PageIndex core logic.')
+@secure()
+param openaiApiKey string
+
+@description('The Docker image to deploy.')
+param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+
+// Variables to enforce unique, valid names
+var acrName = 'acrpageindexsidecar${uniqueString(resourceGroup().id)}'
+var logAnalyticsWorkspaceName = 'law-pageindex-${uniqueString(resourceGroup().id)}'
+var containerAppEnvironmentName = 'cae-pageindex-${uniqueString(resourceGroup().id)}'
+var containerAppName = 'ca-pageindex-api'
+
+// 1. Azure Container Registry
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: acrName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+  }
+}
+
+// 2. Log Analytics Workspace (for Container App logs)
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: logAnalyticsWorkspaceName
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+  }
+}
+
+// 3. Container Apps Environment
+resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
+  name: containerAppEnvironmentName
+  location: location
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
+    }
+  }
+}
+
+// 4. Container App (FastAPI Wrapper)
+resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
+  name: containerAppName
+  location: location
+  properties: {
+    managedEnvironmentId: containerAppEnvironment.id
+    configuration: {
+      ingress: {
+        external: true // Exposing externally, change to false if you want it only reachable within a VNet/other apps
+        targetPort: 8000
+        allowInsecure: false
+        traffic: [
+          {
+            latestRevision: true
+            weight: 100
+          }
+        ]
+      }
+      registries: [
+        {
+          server: acr.properties.loginServer
+          username: acr.listCredentials().username
+          passwordSecretRef: 'acr-password'
+        }
+      ]
+      secrets: [
+        {
+          name: 'acr-password'
+          value: acr.listCredentials().passwords[0].value
+        }
+        {
+          name: 'api-token'
+          value: apiToken
+        }
+        {
+          name: 'openai-api-key'
+          value: openaiApiKey
+        }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: 'pageindex-api'
+          image: containerImage
+          resources: {
+            cpu: json('0.5')
+            memory: '1.0Gi'
+          }
+          env: [
+            {
+              name: 'API_TOKEN'
+              secretRef: 'api-token'
+            }
+            {
+              name: 'OPENAI_API_KEY'
+              secretRef: 'openai-api-key'
+            }
+          ]
+        }
+      ]
+      scale: {
+        minReplicas: 0 // Scale to zero capabilities
+        maxReplicas: 2
+      }
+    }
+  }
+}
+
+// Outputs to retrieve dynamically assigned names
+output acrLoginServer string = acr.properties.loginServer
+output acrName string = acr.name
+output apiUrl string = apiContainerApp.properties.configuration.ingress.fqdn

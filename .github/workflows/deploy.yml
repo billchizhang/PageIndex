@@ -1,0 +1,101 @@
+name: Build and Deploy PageIndex API
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AZURE_RESOURCE_GROUP: "asireon-claw"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+        run: |
+          python -m pytest tests/test_api.py
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Setup Bicep
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az bicep install
+
+      # We deploy the Bicep template first with the default hello-world image
+      # just to ensure the ACR is provisioned before we try logging into it.
+      - name: Provision Infrastructure (First Pass)
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            apiToken="${{ secrets.API_TOKEN }}"
+            openaiApiKey="${{ secrets.OPENAI_API_KEY }}"
+
+      - name: Get ACR Registry Name
+        id: get-acr
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            ACR_SERVER=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrLoginServer.value" -o tsv)
+            ACR_NAME=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrName.value" -o tsv)
+            echo "ACR_SERVER=$ACR_SERVER" >> $GITHUB_ENV
+            echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
+
+      - name: Log in to ACR
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t ${{ env.ACR_SERVER }}/pageindex-api:$IMAGE_TAG .
+          docker push ${{ env.ACR_SERVER }}/pageindex-api:$IMAGE_TAG
+
+      # Second pass deploys the newly built image
+      - name: Deploy App with New Image
+        uses: azure/arm-deploy@v2
+        with:
+          scope: resourcegroup
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
+          template: ./infra/main.bicep
+          parameters: >
+            apiToken="${{ secrets.API_TOKEN }}"
+            openaiApiKey="${{ secrets.OPENAI_API_KEY }}"
+            containerImage="${{ env.ACR_SERVER }}/pageindex-api:${{ github.sha }}"
