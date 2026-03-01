@@ -2,6 +2,7 @@ import os
 import shutil
 import uuid
 import json
+import asyncio
 from typing import Annotated
 
 from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
@@ -60,8 +61,9 @@ async def index_pdf(
             if_add_node_text='no'
         )
 
-        # Process the temporary PDF
-        toc_with_page_number = page_index_main(tmp_path, opt)
+        # Process the temporary PDF in a separate thread to avoid
+        # asyncio.run() conflict with Uvicorn's event loop
+        toc_with_page_number = await asyncio.to_thread(page_index_main, tmp_path, opt)
 
         return JSONResponse(content=toc_with_page_number)
 
@@ -106,7 +108,7 @@ async def index_md(
             if_add_node_text='no'
         )
 
-        toc_with_page_number = page_index_main(tmp_path, opt)
+        toc_with_page_number = await asyncio.to_thread(page_index_main, tmp_path, opt)
         return JSONResponse(content=toc_with_page_number)
 
     except Exception as e:
@@ -150,7 +152,7 @@ async def index_txt(
             if_add_node_text='no'
         )
 
-        toc_with_page_number = page_index_main(tmp_path, opt)
+        toc_with_page_number = await asyncio.to_thread(page_index_main, tmp_path, opt)
         return JSONResponse(content=toc_with_page_number)
 
     except Exception as e:
