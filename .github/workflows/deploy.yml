@@ -47,10 +47,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Setup Bicep
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az bicep install
+        run: az bicep install
 
       # We deploy the Bicep template first with the default hello-world image
       # just to ensure the ACR is provisioned before we try logging into it.
@@ -67,19 +64,16 @@ jobs:
 
       - name: Get ACR Registry Name
         id: get-acr
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            ACR_SERVER=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrLoginServer.value" -o tsv)
-            ACR_NAME=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrName.value" -o tsv)
-            echo "ACR_SERVER=$ACR_SERVER" >> $GITHUB_ENV
-            echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
+        run: |
+          ACR_SERVER=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrLoginServer.value" -o tsv)
+          ACR_NAME=$(az deployment group show -g ${{ env.AZURE_RESOURCE_GROUP }} -n main --query "properties.outputs.acrName.value" -o tsv)
+          echo "ACR_SERVER=$ACR_SERVER" >> $GITHUB_ENV
+          echo "ACR_NAME=$ACR_NAME" >> $GITHUB_ENV
 
       - name: Log in to ACR
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az acr login --name ${{ env.ACR_NAME }}
+        run: |
+          TOKEN=$(az acr login --name ${{ env.ACR_NAME }} --expose-token --output tsv --query accessToken)
+          docker login ${{ env.ACR_SERVER }} -u 00000000-0000-0000-0000-000000000000 -p "$TOKEN"
 
       - name: Build and Push Docker Image
         run: |
