@@ -13,11 +13,16 @@ import sys
 import json
 import requests
 
-API_URL = os.getenv("API_URL", "https://ca-pageindex-api.jollyriver-672136ad.eastus.azurecontainerapps.io")
+API_URL = os.getenv("API_URL", "").rstrip("/")
 API_TOKEN = os.getenv("API_TOKEN")
 PDF_PATH = os.path.join(os.path.dirname(__file__), "pdfs", "earthmover.pdf")
 
 def main():
+    if not API_URL:
+        print("ERROR: API_URL environment variable is not set.")
+        print("Usage: API_URL=https://your-app-url API_TOKEN=<your-token> python3 tests/test_live_api.py")
+        sys.exit(1)
+
     if not API_TOKEN:
         print("ERROR: API_TOKEN environment variable is not set.")
         print("Usage: API_TOKEN=<your-token> python3 tests/test_live_api.py")

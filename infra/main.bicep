@@ -64,7 +64,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
       ingress: {
-        external: false // Internal only — accessible by other Container Apps in the same environment
+        external: true // Exposed externally — secured by X-API-Key authentication
         targetPort: 8000
         allowInsecure: false
         traffic: [
