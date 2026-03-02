@@ -1,35 +1,40 @@
 name: Live API Smoke Test
 
+# NOTE: This workflow requires the Container App to have external ingress enabled.
+# If the app uses internal-only ingress (external: false in Bicep),
+# set the PAGEINDEX_API_URL secret to the internal FQDN and run from
+# within the Azure VNet or another container app in the same environment.
+
 on:
-    workflow_run:
-        workflows: ["Build and Deploy PageIndex API"]
-        types:
-            - completed
-        branches:
-            - main
+  workflow_run:
+    workflows: ["Build and Deploy PageIndex API"]
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
-    smoke-test:
-        runs-on: ubuntu-latest
-        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  smoke-test:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
-        steps:
-            - name: Checkout Code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-            - name: Set up Python 3.12
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.12"
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-            - name: Install requests
-              run: pip install requests
+      - name: Install requests
+        run: pip install requests
 
-            - name: Wait for Container App to stabilize
-              run: sleep 30
+      - name: Wait for Container App to stabilize
+        run: sleep 30
 
-            - name: Run Live Smoke Tests
-              env:
-                  API_TOKEN: ${{ secrets.API_TOKEN }}
-                  API_URL: "https://ca-pageindex-api.jollyriver-672136ad.eastus.azurecontainerapps.io"
-              run: python3 tests/test_live_api.py
+      - name: Run Live Smoke Tests
+        env:
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          API_URL: ${{ secrets.PAGEINDEX_API_URL }}
+        run: python3 tests/test_live_api.py

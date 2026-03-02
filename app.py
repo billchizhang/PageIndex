@@ -6,27 +6,72 @@ import asyncio
 from typing import Annotated
 
 from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
+from fastapi.security import APIKeyHeader
 from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
 
 from pageindex import config, page_index_main
 
-app = FastAPI(title="PageIndex API", description="API Wrapper for PageIndex")
+API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+app = FastAPI(
+    title="PageIndex API",
+    description=(
+        "A lightweight API wrapper around **PageIndex** — an LLM-powered document "
+        "structure extraction engine.\n\n"
+        "## Supported Formats\n"
+        "| Endpoint | File Type | Extension |\n"
+        "|---|---|---|\n"
+        "| `POST /index-pdf` | PDF | `.pdf` |\n"
+        "| `POST /index-md` | Markdown | `.md` |\n"
+        "| `POST /index-txt` | Plain Text | `.txt` |\n\n"
+        "## Authentication\n"
+        "All endpoints require an `X-API-Key` header. Click the **Authorize** button "
+        "above and enter your API token."
+    ),
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    contact={
+        "name": "PageIndex",
+        "url": "https://github.com/billchizhang/PageIndex",
+    },
+    license_info={
+        "name": "MIT",
+    },
+)
 
 # Secure token from environment variable, with a fallback
 API_TOKEN = os.getenv("API_TOKEN", "default-secure-token")
 
-async def verify_api_key(x_api_key: str = Header(None)):
+async def verify_api_key(api_key: str = Depends(API_KEY_HEADER)):
     """
-    Dependency to check for X-API-Key header.
+    Security dependency: validates the X-API-Key header.
     """
-    if x_api_key != API_TOKEN:
+    if api_key != API_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API Key",
         )
-    return x_api_key
+    return api_key
 
-@app.post("/index-pdf", dependencies=[Depends(verify_api_key)])
+@app.post(
+    "/index-pdf",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Document Indexing"],
+    summary="Index a PDF document",
+    description=(
+        "Upload a PDF file to extract its hierarchical structure using PageIndex. "
+        "The file is temporarily stored, processed via LLM-powered analysis, "
+        "and the structured JSON tree is returned."
+    ),
+    responses={
+        200: {"description": "Structured JSON tree of the document"},
+        400: {"description": "File is not a PDF"},
+        401: {"description": "Invalid or missing API Key"},
+        500: {"description": "Internal processing error"},
+    },
+)
 async def index_pdf(
     file: UploadFile = File(...),
 ):
@@ -77,7 +122,23 @@ async def index_pdf(
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-@app.post("/index-md", dependencies=[Depends(verify_api_key)])
+@app.post(
+    "/index-md",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Document Indexing"],
+    summary="Index a Markdown document",
+    description=(
+        "Upload a Markdown file to extract its hierarchical structure using PageIndex. "
+        "The file is temporarily stored, processed via LLM-powered analysis, "
+        "and the structured JSON tree is returned."
+    ),
+    responses={
+        200: {"description": "Structured JSON tree of the document"},
+        400: {"description": "File is not a Markdown file"},
+        401: {"description": "Invalid or missing API Key"},
+        500: {"description": "Internal processing error"},
+    },
+)
 async def index_md(
     file: UploadFile = File(...),
 ):
@@ -121,7 +182,23 @@ async def index_md(
             os.remove(tmp_path)
 
 
-@app.post("/index-txt", dependencies=[Depends(verify_api_key)])
+@app.post(
+    "/index-txt",
+    dependencies=[Depends(verify_api_key)],
+    tags=["Document Indexing"],
+    summary="Index a Text document",
+    description=(
+        "Upload a plain text file to extract its hierarchical structure using PageIndex. "
+        "The file is temporarily stored, processed via LLM-powered analysis, "
+        "and the structured JSON tree is returned."
+    ),
+    responses={
+        200: {"description": "Structured JSON tree of the document"},
+        400: {"description": "File is not a Text file"},
+        401: {"description": "Invalid or missing API Key"},
+        500: {"description": "Internal processing error"},
+    },
+)
 async def index_txt(
     file: UploadFile = File(...),
 ):

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "11855658598054991188"
+      "templateHash": "12876180725615203696"
     }
   },
   "parameters": {
@@ -93,7 +93,7 @@
         "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppEnvironmentName'))]",
         "configuration": {
           "ingress": {
-            "external": true,
+            "external": false,
             "targetPort": 8000,
             "allowInsecure": false,
             "traffic": [

@@ -64,7 +64,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
       ingress: {
-        external: true // Exposing externally, change to false if you want it only reachable within a VNet/other apps
+        external: false // Internal only — accessible by other Container Apps in the same environment
         targetPort: 8000
         allowInsecure: false
         traffic: [
