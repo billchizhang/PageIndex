@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, Depends, HTTPException, status, Header, UploadFile, File
 from fastapi.security import APIKeyHeader
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.openapi.utils import get_openapi
 
 from pageindex import config, page_index_main
@@ -40,6 +40,16 @@ app = FastAPI(
         "name": "MIT",
     },
 )
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect root to Swagger docs."""
+    return RedirectResponse(url="/docs")
+
+@app.get("/health", tags=["System"], summary="Health check")
+async def health():
+    """Returns service status. Used by Azure for liveness/readiness probes."""
+    return {"status": "healthy"}
 
 # Secure token from environment variable, with a fallback
 API_TOKEN = os.getenv("API_TOKEN", "default-secure-token")
