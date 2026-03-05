@@ -12,28 +12,19 @@ param openaiApiKey string
 @description('The Docker image to deploy.')
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
+@description('The login server of the shared ACR (e.g. asireonclawacr.azurecr.io).')
+param acrLoginServer string
+
+@description('The admin password for the shared ACR.')
+@secure()
+param acrPassword string
+
 // Variables to enforce unique, valid names
-var acrName = 'acrpageindexsidecar${uniqueString(resourceGroup().id)}'
 var logAnalyticsWorkspaceName = 'law-pageindex-${uniqueString(resourceGroup().id)}'
 var containerAppEnvironmentName = 'cae-pageindex-${uniqueString(resourceGroup().id)}'
 var containerAppName = 'ca-pageindex-api'
 
-// 1. Azure Container Registry
-resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
-  name: acrName
-  location: location
-  tags: {
-    Component: 'PageIndex'
-  }
-  sku: {
-    name: 'Basic'
-  }
-  properties: {
-    adminUserEnabled: true
-  }
-}
-
-// 2. Log Analytics Workspace (for Container App logs)
+// 1. Log Analytics Workspace (for Container App logs)
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsWorkspaceName
   location: location
@@ -47,7 +38,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-// 3. Container Apps Environment
+// 2. Container Apps Environment
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerAppEnvironmentName
   location: location
@@ -65,7 +56,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' 
   }
 }
 
-// 4. Container App (FastAPI Wrapper)
+// 3. Container App (FastAPI Wrapper)
 resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: containerAppName
   location: location
@@ -88,15 +79,15 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
       }
       registries: [
         {
-          server: acr.properties.loginServer
-          username: acr.listCredentials().username
+          server: acrLoginServer
+          username: split(acrLoginServer, '.')[0]
           passwordSecretRef: 'acr-password'
         }
       ]
       secrets: [
         {
           name: 'acr-password'
-          value: acr.listCredentials().passwords[0].value
+          value: acrPassword
         }
         {
           name: 'api-token'
@@ -137,7 +128,5 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
   }
 }
 
-// Outputs to retrieve dynamically assigned names
-output acrLoginServer string = acr.properties.loginServer
-output acrName string = acr.name
+// Outputs
 output apiUrl string = apiContainerApp.properties.configuration.ingress.fqdn

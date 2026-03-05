@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "12876180725615203696"
+      "templateHash": "14212629738486470262"
     }
   },
   "parameters": {
@@ -34,32 +34,34 @@
       "metadata": {
         "description": "The Docker image to deploy."
       }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "The login server of the shared ACR (e.g. asireonclawacr.azurecr.io)."
+      }
+    },
+    "acrPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The admin password for the shared ACR."
+      }
     }
   },
   "variables": {
-    "acrName": "[format('acrpageindexsidecar{0}', uniqueString(resourceGroup().id))]",
     "logAnalyticsWorkspaceName": "[format('law-pageindex-{0}', uniqueString(resourceGroup().id))]",
     "containerAppEnvironmentName": "[format('cae-pageindex-{0}', uniqueString(resourceGroup().id))]",
     "containerAppName": "ca-pageindex-api"
   },
   "resources": [
     {
-      "type": "Microsoft.ContainerRegistry/registries",
-      "apiVersion": "2023-01-01-preview",
-      "name": "[variables('acrName')]",
-      "location": "[parameters('location')]",
-      "sku": {
-        "name": "Basic"
-      },
-      "properties": {
-        "adminUserEnabled": true
-      }
-    },
-    {
       "type": "Microsoft.OperationalInsights/workspaces",
       "apiVersion": "2022-10-01",
       "name": "[variables('logAnalyticsWorkspaceName')]",
       "location": "[parameters('location')]",
+      "tags": {
+        "Component": "PageIndex"
+      },
       "properties": {
         "sku": {
           "name": "PerGB2018"
@@ -71,6 +73,9 @@
       "apiVersion": "2023-05-01",
       "name": "[variables('containerAppEnvironmentName')]",
       "location": "[parameters('location')]",
+      "tags": {
+        "Component": "PageIndex"
+      },
       "properties": {
         "appLogsConfiguration": {
           "destination": "log-analytics",
@@ -89,11 +94,14 @@
       "apiVersion": "2023-05-01",
       "name": "[variables('containerAppName')]",
       "location": "[parameters('location')]",
+      "tags": {
+        "Component": "PageIndex"
+      },
       "properties": {
         "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppEnvironmentName'))]",
         "configuration": {
           "ingress": {
-            "external": false,
+            "external": true,
             "targetPort": 8000,
             "allowInsecure": false,
             "traffic": [
@@ -105,15 +113,15 @@
           },
           "registries": [
             {
-              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer]",
-              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').username]",
+              "server": "[parameters('acrLoginServer')]",
+              "username": "[split(parameters('acrLoginServer'), '.')[0]]",
               "passwordSecretRef": "acr-password"
             }
           ],
           "secrets": [
             {
               "name": "acr-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').passwords[0].value]"
+              "value": "[parameters('acrPassword')]"
             },
             {
               "name": "api-token",
@@ -153,20 +161,11 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
         "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppEnvironmentName'))]"
       ]
     }
   ],
   "outputs": {
-    "acrLoginServer": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-01-01-preview').loginServer]"
-    },
-    "acrName": {
-      "type": "string",
-      "value": "[variables('acrName')]"
-    },
     "apiUrl": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.App/containerApps', variables('containerAppName')), '2023-05-01').configuration.ingress.fqdn]"
