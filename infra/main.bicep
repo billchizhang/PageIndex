@@ -22,6 +22,9 @@ var containerAppName = 'ca-pageindex-api'
 resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
   name: acrName
   location: location
+  tags: {
+    Component: 'PageIndex'
+  }
   sku: {
     name: 'Basic'
   }
@@ -34,6 +37,9 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: logAnalyticsWorkspaceName
   location: location
+  tags: {
+    Component: 'PageIndex'
+  }
   properties: {
     sku: {
       name: 'PerGB2018'
@@ -45,6 +51,9 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   name: containerAppEnvironmentName
   location: location
+  tags: {
+    Component: 'PageIndex'
+  }
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
@@ -60,6 +69,9 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' 
 resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: containerAppName
   location: location
+  tags: {
+    Component: 'PageIndex'
+  }
   properties: {
     managedEnvironmentId: containerAppEnvironment.id
     configuration: {
