@@ -51,7 +51,7 @@ def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_
             print('************* Retrying *************')
             logging.error(f"Error: {e}")
             if i < max_retries - 1:
-                time.sleep(1)  # Wait for 1秒 before retrying
+                time.sleep(min(2 ** i, 30))  # Exponential backoff, capped at 30s
             else:
                 logging.error('Max retries reached for prompt: ' + prompt)
                 return "Error"
@@ -80,7 +80,7 @@ def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
             print('************* Retrying *************')
             logging.error(f"Error: {e}")
             if i < max_retries - 1:
-                time.sleep(1)  # Wait for 1秒 before retrying
+                time.sleep(min(2 ** i, 30))  # Exponential backoff, capped at 30s
             else:
                 logging.error('Max retries reached for prompt: ' + prompt)
                 return "Error"
@@ -102,7 +102,7 @@ async def ChatGPT_API_async(model, prompt, api_key=CHATGPT_API_KEY):
             print('************* Retrying *************')
             logging.error(f"Error: {e}")
             if i < max_retries - 1:
-                await asyncio.sleep(1)  # Wait for 1s before retrying
+                await asyncio.sleep(min(2 ** i, 30))  # Exponential backoff, capped at 30s
             else:
                 logging.error('Max retries reached for prompt: ' + prompt)
                 return "Error"  
