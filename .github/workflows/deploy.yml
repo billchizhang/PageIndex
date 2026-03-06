@@ -108,4 +108,4 @@ jobs:
           az containerapp ingress update \
             --name ca-pageindex-api \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --request-timeout 600
+            --transport-timeout 600
