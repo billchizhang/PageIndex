@@ -101,11 +101,12 @@ jobs:
             acrLoginServer="${{ env.ACR_SERVER }}"
             acrPassword="${{ env.ACR_PASSWORD }}"
 
-      # Bicep API 2023-05-01 doesn't expose requestTimeoutSeconds,
-      # so we set it via CLI after every deployment to avoid resets.
+      # The Bicep containerApp API version may not expose requestTimeoutSeconds,
+      # so we patch it directly via az resource update after every deployment.
       - name: Set ingress timeout (600s for large PDF processing)
         run: |
-          az containerapp ingress update \
-            --name ca-pageindex-api \
+          az resource update \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --transport-timeout 600
+            --name ca-pageindex-api \
+            --resource-type "Microsoft.App/containerApps" \
+            --set properties.configuration.ingress.requestTimeoutSeconds=600
