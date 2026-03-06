@@ -57,7 +57,7 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' 
 }
 
 // 3. Container App (FastAPI Wrapper)
-resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: containerAppName
   location: location
   tags: {
@@ -70,7 +70,6 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
         external: true // Exposed externally — secured by X-API-Key authentication
         targetPort: 8000
         allowInsecure: false
-        requestTimeoutSeconds: 600 // Large PDF processing needs up to 10 minutes
 
         traffic: [
           {
