@@ -93,6 +93,7 @@ jobs:
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ./infra/main.bicep
+          deploymentName: pageindex-${{ github.sha }}
           parameters: >
             apiToken="${{ secrets.API_TOKEN }}"
             openaiApiKey="${{ secrets.OPENAI_API_KEY }}"
