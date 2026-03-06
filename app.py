@@ -106,7 +106,7 @@ async def index_pdf(
         # Configure PageIndex options
         # We can also add these as query parameters to the endpoint later if needed
         opt = config(
-            model='gpt-4o-2024-11-20',
+            model='gpt-4o-mini',
             toc_check_page_num=20,
             max_page_num_each_node=10,
             max_token_num_each_node=40000,
@@ -169,7 +169,7 @@ async def index_md(
             shutil.copyfileobj(file.file, buffer)
 
         opt = config(
-            model='gpt-4o-2024-11-20',
+            model='gpt-4o-mini',
             toc_check_page_num=20,
             max_page_num_each_node=10,
             max_token_num_each_node=40000,
@@ -229,7 +229,7 @@ async def index_txt(
             shutil.copyfileobj(file.file, buffer)
 
         opt = config(
-            model='gpt-4o-2024-11-20',
+            model='gpt-4o-mini',
             toc_check_page_num=20,
             max_page_num_each_node=10,
             max_token_num_each_node=40000,

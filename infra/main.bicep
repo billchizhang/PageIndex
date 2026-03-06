@@ -121,7 +121,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
         }
       ]
       scale: {
-        minReplicas: 0 // Scale to zero capabilities
+        minReplicas: 1 // Keep warm to avoid cold-start timeouts on large PDFs
         maxReplicas: 2
       }
     }
