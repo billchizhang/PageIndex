@@ -100,13 +100,3 @@ jobs:
             containerImage="${{ env.ACR_SERVER }}/pageindex-api:${{ github.sha }}"
             acrLoginServer="${{ env.ACR_SERVER }}"
             acrPassword="${{ env.ACR_PASSWORD }}"
-
-      # The Bicep containerApp API version may not expose requestTimeoutSeconds,
-      # so we patch it directly via az resource update after every deployment.
-      - name: Set ingress timeout (600s for large PDF processing)
-        run: |
-          az resource update \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --name ca-pageindex-api \
-            --resource-type "Microsoft.App/containerApps" \
-            --set properties.configuration.ingress.requestTimeoutSeconds=600
