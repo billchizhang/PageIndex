@@ -100,14 +100,3 @@ jobs:
             containerImage="${{ env.ACR_SERVER }}/pageindex-api:${{ github.sha }}"
             acrLoginServer="${{ env.ACR_SERVER }}"
             acrPassword="${{ env.ACR_PASSWORD }}"
-
-      # requestTimeoutSeconds is not in the Bicep/ARM schema, but the REST API accepts it.
-      - name: Set ingress timeout (600s for large PDF processing)
-        run: |
-          APP_ID=$(az containerapp show \
-            --name ca-pageindex-api \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --query id -o tsv)
-          az rest --method PATCH \
-            --url "${APP_ID}?api-version=2024-03-01" \
-            --body '{"properties":{"configuration":{"ingress":{"requestTimeoutSeconds":600}}}}'
