@@ -5,10 +5,6 @@ param location string = resourceGroup().location
 @secure()
 param apiToken string
 
-@description('The OpenAI API key needed for the PageIndex core logic.')
-@secure()
-param openaiApiKey string
-
 @description('The Docker image to deploy.')
 param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 
@@ -23,6 +19,7 @@ param acrPassword string
 var logAnalyticsWorkspaceName = 'law-pageindex-${uniqueString(resourceGroup().id)}'
 var containerAppEnvironmentName = 'cae-pageindex-${uniqueString(resourceGroup().id)}'
 var containerAppName = 'ca-pageindex-api'
+var openAiAccountName = 'pageindex-openai-${uniqueString(resourceGroup().id)}'
 
 // 1. Log Analytics Workspace (for Container App logs)
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -55,8 +52,40 @@ resource containerAppEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' 
     }
   }
 }
+// 3. Azure OpenAI (for LLM-powered document structure extraction)
+resource openAiAccount 'Microsoft.CognitiveServices/accounts@2024-04-01-preview' = {
+  name: openAiAccountName
+  location: location
+  tags: {
+    Component: 'PageIndex'
+  }
+  kind: 'OpenAI'
+  sku: {
+    name: 'S0'
+  }
+  properties: {
+    customSubDomainName: openAiAccountName
+    publicNetworkAccess: 'Enabled'
+  }
+}
 
-// 3. Container App (FastAPI Wrapper)
+resource gpt4oMiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-04-01-preview' = {
+  parent: openAiAccount
+  name: 'gpt-4o-mini'
+  sku: {
+    name: 'Standard'
+    capacity: 1000 // 1M tokens per minute
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: 'gpt-4o-mini'
+      version: '2024-07-18'
+    }
+  }
+}
+
+// 4. Container App (FastAPI Wrapper)
 resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: containerAppName
   location: location
@@ -95,8 +124,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
           value: apiToken
         }
         {
-          name: 'openai-api-key'
-          value: openaiApiKey
+          name: 'azure-openai-key'
+          value: openAiAccount.listKeys().key1
         }
       ]
     }
@@ -115,8 +144,16 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
               secretRef: 'api-token'
             }
             {
-              name: 'OPENAI_API_KEY'
-              secretRef: 'openai-api-key'
+              name: 'AZURE_OPENAI_ENDPOINT'
+              value: openAiAccount.properties.endpoint
+            }
+            {
+              name: 'AZURE_OPENAI_KEY'
+              secretRef: 'azure-openai-key'
+            }
+            {
+              name: 'AZURE_OPENAI_DEPLOYMENT'
+              value: gpt4oMiniDeployment.name
             }
           ]
         }
@@ -131,3 +168,4 @@ resource apiContainerApp 'Microsoft.App/containerApps@2023-05-01' = {
 
 // Outputs
 output apiUrl string = apiContainerApp.properties.configuration.ingress.fqdn
+output openAiEndpoint string = openAiAccount.properties.endpoint

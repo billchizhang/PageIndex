@@ -1,5 +1,6 @@
 import tiktoken
 import openai
+from openai import AzureOpenAI, AsyncAzureOpenAI
 import logging
 import os
 from datetime import datetime
@@ -17,7 +18,11 @@ import yaml
 from pathlib import Path
 from types import SimpleNamespace as config
 
-CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
+# Azure OpenAI configuration
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_KEY = os.getenv("AZURE_OPENAI_KEY")
+AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o-mini")
+AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-06-01")
 
 def count_tokens(text, model=None):
     if not text:
@@ -26,9 +31,14 @@ def count_tokens(text, model=None):
     tokens = enc.encode(text)
     return len(tokens)
 
-def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
+def ChatGPT_API_with_finish_reason(model, prompt, api_key=None, chat_history=None):
     max_retries = 10
-    client = openai.OpenAI(api_key=api_key)
+    client = AzureOpenAI(
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_key=api_key or AZURE_OPENAI_KEY,
+        api_version=AZURE_OPENAI_API_VERSION,
+    )
+    deployment = AZURE_OPENAI_DEPLOYMENT
     for i in range(max_retries):
         try:
             if chat_history:
@@ -38,7 +48,7 @@ def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_
                 messages = [{"role": "user", "content": prompt}]
             
             response = client.chat.completions.create(
-                model=model,
+                model=deployment,
                 messages=messages,
                 temperature=0,
             )
@@ -58,9 +68,14 @@ def ChatGPT_API_with_finish_reason(model, prompt, api_key=CHATGPT_API_KEY, chat_
 
 
 
-def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
+def ChatGPT_API(model, prompt, api_key=None, chat_history=None):
     max_retries = 10
-    client = openai.OpenAI(api_key=api_key)
+    client = AzureOpenAI(
+        azure_endpoint=AZURE_OPENAI_ENDPOINT,
+        api_key=api_key or AZURE_OPENAI_KEY,
+        api_version=AZURE_OPENAI_API_VERSION,
+    )
+    deployment = AZURE_OPENAI_DEPLOYMENT
     for i in range(max_retries):
         try:
             if chat_history:
@@ -70,7 +85,7 @@ def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
                 messages = [{"role": "user", "content": prompt}]
             
             response = client.chat.completions.create(
-                model=model,
+                model=deployment,
                 messages=messages,
                 temperature=0,
             )
@@ -86,14 +101,19 @@ def ChatGPT_API(model, prompt, api_key=CHATGPT_API_KEY, chat_history=None):
                 return "Error"
             
 
-async def ChatGPT_API_async(model, prompt, api_key=CHATGPT_API_KEY):
+async def ChatGPT_API_async(model, prompt, api_key=None):
     max_retries = 10
     messages = [{"role": "user", "content": prompt}]
+    deployment = AZURE_OPENAI_DEPLOYMENT
     for i in range(max_retries):
         try:
-            async with openai.AsyncOpenAI(api_key=api_key) as client:
+            async with AsyncAzureOpenAI(
+                azure_endpoint=AZURE_OPENAI_ENDPOINT,
+                api_key=api_key or AZURE_OPENAI_KEY,
+                api_version=AZURE_OPENAI_API_VERSION,
+            ) as client:
                 response = await client.chat.completions.create(
-                    model=model,
+                    model=deployment,
                     messages=messages,
                     temperature=0,
                 )

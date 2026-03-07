@@ -96,7 +96,6 @@ jobs:
           deploymentName: pageindex-${{ github.sha }}
           parameters: >
             apiToken="${{ secrets.API_TOKEN }}"
-            openaiApiKey="${{ secrets.OPENAI_API_KEY }}"
             containerImage="${{ env.ACR_SERVER }}/pageindex-api:${{ github.sha }}"
             acrLoginServer="${{ env.ACR_SERVER }}"
             acrPassword="${{ env.ACR_PASSWORD }}"
