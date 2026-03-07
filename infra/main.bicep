@@ -73,7 +73,7 @@ resource gpt4oMiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
   parent: openAiAccount
   name: 'gpt-4o-mini'
   sku: {
-    name: 'Standard'
+    name: 'GlobalStandard'
     capacity: 1000 // 1M tokens per minute
   }
   properties: {
